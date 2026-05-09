@@ -1,8 +1,6 @@
 import discord
 from discord.ext import commands, tasks
-from google import genai
 import random
-import asyncio
 import os
 
 # ── Config ──────────────────────────────────────────────────────────────────
@@ -10,22 +8,6 @@ DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GUILD_ID          = 1499378375305728020
 CHANNEL_ID        = 1502698586431815892
 LOG_CHANNEL_ID    = 1501651214138474536
-GOOGLE_API_KEY    = os.getenv("GOOGLE_API_KEY")
-
-# ── Gemini Setup ─────────────────────────────────────────────────────────────
-client = genai.Client(api_key=GOOGLE_API_KEY)
-
-SYSTEM_PROMPT = """Sen MCTRPVP adlı bir Discord botusun. Minecraft PvP sunucusuna ait, sert ve rekabetçi bir karakterin var.
-Türkçe konuş. Kısa, etkili cevaplar ver. Şu konularda uzmansın:
-- Minecraft PvP teknikleri (knockback, sprint reset, w-tapping, strafing)
-- Kit PvP, UHC, Crystal PvP, Sword PvP
-- İyi PvP gear ve enchantment önerileri  
-- Combo yapmak, clutch etmek
-- Rakipleri ezme ve dominant olma
-- PvP motivasyonu ve mentalitesi
-Her zaman güvenli, rekabetçi ve heyecanlı bir dil kullan. Rakipleri "bot", "noob", "ez" gibi PvP kültürüne uygun terimlerle aşağılayabilirsin.
-Emoji kullan ⚔️🔥💀🏆
-"""
 
 # ── Otomatik mesajlar ────────────────────────────────────────────────────────
 AUTO_MESSAGES = [
@@ -47,35 +29,6 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-conversation_history: dict[int, list] = {}  # user_id -> chat history
-
-# ── Gemini Chat Helper ────────────────────────────────────────────────────────
-async def ask_gemini(user_id: int, user_message: str) -> str:
-    try:
-        if user_id not in conversation_history:
-            conversation_history[user_id] = []
-
-        history = conversation_history[user_id]
-        history.append(f"Kullanıcı: {user_message}")
-
-        # Son 10 mesajı hafızada tut
-        context = "\n".join(history[-10:])
-        full_prompt = SYSTEM_PROMPT + "\n\nKonuşma geçmişi:\n" + context + "\n\nBot:"
-
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=full_prompt
-            )
-        )
-        reply = response.text.strip()
-        history.append(f"Bot: {reply}")
-        return reply
-    except Exception as e:
-        return f"⚠️ Bir hata oluştu: {str(e)}"
-
 # ── Otomatik mesaj görevi ─────────────────────────────────────────────────────
 @tasks.loop(minutes=30)
 async def auto_pvp_message():
@@ -94,8 +47,7 @@ async def on_ready():
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         await channel.send(
-            "⚔️ **MCTRPVP Bot aktif!** Hazır mısınız? PvP sezonu açıldı! "
-            "Bana soru sormak için `!pvp <soru>` yaz veya doğrudan mention at. 🔥"
+            "⚔️ **MCTRPVP Bot aktif!** Hazır mısınız? PvP sezonu açıldı! 🔥"
         )
 
 @bot.event
@@ -105,30 +57,7 @@ async def on_message(message: discord.Message):
 
     await bot.process_commands(message)
 
-    # Bot mention edilirse veya hedef kanalda mesaj atılırsa yanıt ver
-    mentioned = bot.user in message.mentions
-    in_target = message.channel.id == CHANNEL_ID
-
-    if (mentioned or in_target) and not message.content.startswith("!"):
-        content = message.content.replace(f"<@{bot.user.id}>", "").strip()
-        if not content:
-            return
-
-        async with message.channel.typing():
-            reply = await ask_gemini(message.author.id, content)
-        await message.reply(reply)
-
 # ── Commands ──────────────────────────────────────────────────────────────────
-@bot.command(name="pvp")
-async def pvp_cmd(ctx, *, soru: str = None):
-    """AI destekli PvP sorusu sor: !pvp <soru>"""
-    if not soru:
-        await ctx.reply("❓ Bir soru sor! Örnek: `!pvp nasıl daha iyi combo atarım?`")
-        return
-    async with ctx.typing():
-        reply = await ask_gemini(ctx.author.id, soru)
-    await ctx.reply(reply)
-
 @bot.command(name="ipucu")
 async def ipucu_cmd(ctx):
     """Rastgele PvP ipucu verir"""
@@ -255,7 +184,6 @@ async def yardim_cmd(ctx):
         title="⚔️ MCTRPVP Bot Komutları",
         color=discord.Color.red()
     )
-    embed.add_field(name="!pvp <soru>",   value="AI ile PvP sorusu sor",        inline=False)
     embed.add_field(name="!ipucu",         value="Rastgele PvP ipucu al",        inline=False)
     embed.add_field(name="!stats [@kişi]", value="PvP istatistiklerini gör",     inline=False)
     embed.add_field(name="!duello @kişi",  value="Birine 1v1 daveti gönder",     inline=False)
@@ -264,7 +192,6 @@ async def yardim_cmd(ctx):
         value="Test sonucu log kanalına kaydet\nÖrn: `!test @emirhan Heid4uk4HD LT5 Unranked mace`",
         inline=False
     )
-    embed.add_field(name="@MCTRPVP <msg>", value="Botla sohbet et (AI destekli)", inline=False)
     embed.set_footer(text="MCTRPVP | Efsaneler Burada Yazılır 🏆")
     await ctx.send(embed=embed)
 
