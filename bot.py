@@ -90,6 +90,7 @@ async def on_ready():
     print(f"✅ {bot.user} olarak giriş yapıldı!")
     print(f"📡 Sunucu: {GUILD_ID} | Kanal: {CHANNEL_ID}")
     auto_pvp_message.start()
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name="MCTRPVP oynuyor"))
 
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
