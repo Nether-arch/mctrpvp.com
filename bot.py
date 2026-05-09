@@ -94,9 +94,9 @@ async def on_ready():
     channel = bot.get_channel(CHANNEL_ID)
     if channel:
         await channel.send(
-            "⚔️ **MCTRPVP Bot aktif!** Hazır mısınız? PvP sezonu açıldı! "
-            "Bana soru sormak için `!pvp <soru>` yaz veya doğrudan mention at. 🔥"
+            "⚔️ **MCTRPVP Bot aktif!** Hazır mısınız? PvP sezonu açıldı! Bana soru sormak için `!pvp <soru>` yaz veya doğrudan mention at. 🔥\n🎯 Bugün kaç kişi düşürdünüz? Benim sayım: bilmiyorum artık saymayı bıraktım."
         )
+
 
 @bot.event
 async def on_message(message: discord.Message):
